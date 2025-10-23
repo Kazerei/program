@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Playground — HTML / CSS / JS / Log (完全動作版)</title>
+
+  <!-- CodeMirror 5 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/theme/material.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/codemirror.min.js"></script>
+
+  <!-- モード -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/mode/xml/xml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/mode/css/css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/mode/htmlmixed/htmlmixed.min.js"></script>
+
+  <!-- 自動補完 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/edit/closetag.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/edit/closebrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/hint/show-hint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/hint/html-hint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/hint/javascript-hint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/hint/css-hint.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/addon/hint/show-hint.min.css">
+
+  <style>
+    :root {
+      --bg: #0f1720;
+      --panel: #0b1220;
+      --muted: #9aa7b2;
+      --accent: #2dd4bf;
+      --panel-2: #071023;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: Inter, system-ui, Segoe UI, Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      background: linear-gradient(180deg, #051022 0%, #07142a 100%);
+      color: #e6eef3;
+    }
+
+    .topbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 16px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .brand {
+      font-weight: 700;
+      font-size: 16px;
+      color: #bfead4;
+      margin-right: 6px;
+    }
+
+    .controls {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    button.action {
+      background: linear-gradient(180deg, #165b4b, #0f4f43);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      font-weight: 600;
+    }
+
+    button.ghost {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.06);
+      color: var(--muted);
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    #saveBtn, #loadBtn, #fullscreenBtn {
+      background: #2563eb;
+      color: white;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .wrap {
+      display: flex;
+      height: calc(100vh - 56px);
+      gap: 12px;
+      padding: 12px;
+    }
+
+    .left {
+      width: 52%;
+      min-width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .editorCard {
+      background: var(--panel);
+      border-radius: 10px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+    }
+
+    .editorHeader {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      color: var(--muted);
+    }
+
+    .tab-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .tab-buttons button {
+      background: #1b2735;
+      color: #9aa7b2;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .tab-buttons button.active {
+      background: #2563eb;
+      color: white;
+    }
+
+    .CodeMirror {
+      height: 100%;
+      border-radius: 6px;
+      font-size: 13px;
+      background: #07121b !important;
+      color: #d9eef0 !important;
+    }
+
+    .cm-s-material .cm-tag { color: #6ee7b7 !important; font-weight: 700; }
+    .cm-s-material .cm-attribute { color: #ffd166 !important; }
+    .cm-s-material .cm-string { color: #7dd3fc !important; }
+    .cm-s-material .cm-keyword { color: #fca5a5 !important; }
+    .cm-s-material .cm-comment { color: #6b7280 !important; font-style: italic; }
+
+    .CodeMirror-scroll, .CodeMirror-gutters {
+      background: #07121b !important;
+      border: none;
+    }
+
+    .right {
+      width: 48%;
+      min-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .previewCard {
+      background: linear-gradient(180deg, #02111a, #041826);
+      border-radius: 10px;
+      padding: 8px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    }
+
+    .iframeWrap {
+      flex: 1;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.03);
+      margin: 8px 0;
+    }
+
+    iframe#preview {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: white;
+    }
+
+    #logContent {
+      flex: 1;
+      background: #07121b;
+      color: #d9eef0;
+      padding: 8px;
+      border-radius: 6px;
+      overflow: auto;
+      font-family: monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+
+    @media (max-width:1000px){
+      .wrap{ flex-direction:column }
+      .left,.right{ width:100%; min-width:0 }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="topbar">
+    <div class="brand">Playground — HTML / CSS / JS / Log</div>
+    <div class="controls">
+      <button class="action" id="runBtn">Run ▶</button>
+      <button class="ghost" id="autoToggle">Auto: ON</button>
+      <button id="saveBtn">💾 保存</button>
+      <button id="loadBtn">📂 読み込み</button>
+      <button id="fullscreenBtn">⛶ フル画面</button>
+      <input type="file" id="fileInput" accept=".txt" style="display:none;">
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="left">
+      <div class="editorCard">
+        <div class="editorHeader">
+          <div class="tab-buttons">
+            <button class="tab-btn active" data-tab="html">HTML</button>
+            <button class="tab-btn" data-tab="css">CSS</button>
+            <button class="tab-btn" data-tab="js">JS</button>
+            <button class="tab-btn" data-tab="log">Log</button>
+          </div>
+        </div>
+
+        <div class="cm-wrap" style="flex:1;overflow:hidden;">
+          <textarea id="htmlEditor"></textarea>
+          <textarea id="cssEditor" style="display:none;"></textarea>
+          <textarea id="jsEditor" style="display:none;"></textarea>
+          <div id="logContent" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="previewCard">
+        <div class="iframeWrap">
+          <iframe id="preview"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ===== CodeMirror エディター初期化 =====
+  function createEditor(id, mode) {
+    return CodeMirror.fromTextArea(document.getElementById(id), {
+      mode,
+      lineNumbers: true,
+      theme: 'material',
+      autoCloseTags: true,
+      autoCloseBrackets: true
+    });
+  }
+
+  const htmlEditor = createEditor('htmlEditor','htmlmixed');
+  const cssEditor  = createEditor('cssEditor','css');
+  const jsEditor   = createEditor('jsEditor','javascript');
+  const logContent = document.getElementById('logContent');
+  const iframe     = document.getElementById('preview');
+
+  // ===== 初期コード =====
+  htmlEditor.setValue(`<h1>Hello Playground</h1>\n<p>ボタンを押すとカウントアップ</p>\n<button onclick="count()">クリック</button>\n<p id="n">0</p>`);
+  cssEditor.setValue(`body { font-family:sans-serif; color:#222; text-align:center; }\nbutton{padding:6px 14px;}`);
+  jsEditor.setValue(`let num = 0;\nfunction count(){\n  num++;\n  document.getElementById("n").textContent = num;\n  console.log("クリック数:", num);\n  if(num===3) throw new Error("サンプルエラー発生！");\n}`);
+
+  // ===== タブ切り替え =====
+  const tabs = document.querySelectorAll('.tab-btn');
+  tabs.forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      tabs.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.getAttribute('data-tab');
+      htmlEditor.getWrapperElement().style.display = (tab==='html') ? 'block':'none';
+      cssEditor.getWrapperElement().style.display  = (tab==='css') ? 'block':'none';
+      jsEditor.getWrapperElement().style.display   = (tab==='js') ? 'block':'none';
+      logContent.style.display = (tab==='log') ? 'block':'none';
+    });
+  });
+
+  // ===== プレビュー更新 =====
+  function updatePreview() {
+    logContent.textContent = '';
+    const html = htmlEditor.getValue();
+    const css  = cssEditor.getValue();
+    const js   = jsEditor.getValue();
+
+    const content = `
+      <!DOCTYPE html>
+      <html lang="ja">
+      <head>
+        <meta charset="UTF-8" />
+        <style>
+          /* あなたのCSSは上書きしないようにここでは線を消さない */
+          html, body { margin:0; padding:0; }
+        </style>
+        <style>${css}</style>
+      </head>
+      <body>
+        ${html}
+        <div id="__console__" style="font-family:monospace; white-space:pre-wrap; text-align:left; margin:1em; border-top:1px solid #ddd; padding-top:8px;"></div>
+        <script>
+          (function(){
+            const output = document.getElementById("__console__");
+            function addLine(type, msg){
+              const div = document.createElement("div");
+              div.textContent = msg;
+              div.style.color = type === "error" ? "red" : "#111";
+              output.appendChild(div);
+              output.scrollTop = output.scrollHeight;
+            }
+            const _log = console.log.bind(console);
+            const _err = console.error.bind(console);
+            console.log = (...args)=>{
+              const msg = args.map(a => typeof a==="object" ? JSON.stringify(a) : String(a)).join(" ");
+              addLine("log", msg);
+              _log(...args);
+            };
+            console.error = (...args)=>{
+              const msg = args.map(a => typeof a==="object" ? JSON.stringify(a) : String(a)).join(" ");
+              addLine("error", msg);
+              _err(...args);
+            };
+            window.addEventListener("error", e=>{
+              addLine("error", "Error: " + e.message);
+            });
+          })();
+        <\/script>
+        <script>
+          try { ${js} } catch(e){ console.error(e); }
+        <\/script>
+      </body>
+      </html>
+    `;
+
+    iframe.srcdoc = content;
+
+    // ここで "外枠だけ" の線を消す
+    iframe.style.border = "none";
+    iframe.style.outline = "none";
+    iframe.style.margin = "0";
+    iframe.style.padding = "0";
+    iframe.style.display = "block";
+  }
+
+  // ===== Auto更新・Runボタン =====
+  document.getElementById('runBtn').addEventListener('click', updatePreview);
+  let auto = true;
+  const autoBtn = document.getElementById('autoToggle');
+  autoBtn.onclick = ()=>{ auto=!auto; autoBtn.textContent = `Auto: ${auto?'ON':'OFF'}`; };
+
+  const debounce = (fn, delay=500)=>{
+    let t;
+    return (...args)=>{
+      clearTimeout(t);
+      t=setTimeout(()=>{ if(auto) fn(...args); }, delay);
+    };
+  };
+  const debouncedUpdate = debounce(updatePreview);
+  [htmlEditor, cssEditor, jsEditor].forEach(ed => ed.on('change', debouncedUpdate));
+
+  // ===== 保存・読み込み機能 =====
+  const saveBtn = document.getElementById('saveBtn');
+  const loadBtn = document.getElementById('loadBtn');
+  const fileInput = document.getElementById('fileInput');
+
+  saveBtn.addEventListener('click',()=>{
+    const text = `---HTML---\n${htmlEditor.getValue()}\n---CSS---\n${cssEditor.getValue()}\n---JS---\n${jsEditor.getValue()}`;
+    const blob = new Blob([text],{type:'text/plain'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'playground.txt';
+    a.click();
+  });
+
+  loadBtn.addEventListener('click',()=>fileInput.click());
+  fileInput.addEventListener('change', e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      const txt = ev.target.result;
+      const htmlMatch = txt.match(/---HTML---\n([\s\S]*?)\n---CSS---/);
+      const cssMatch  = txt.match(/---CSS---\n([\s\S]*?)\n---JS---/);
+      const jsMatch   = txt.match(/---JS---\n([\s\S]*)$/);
+      if(htmlMatch) htmlEditor.setValue(htmlMatch[1]);
+      if(cssMatch)  cssEditor.setValue(cssMatch[1]);
+      if(jsMatch)   jsEditor.setValue(jsMatch[1]);
+      updatePreview();
+    };
+    reader.readAsText(file);
+  });
+
+  // ===== フルスクリーン =====
+  const fullscreenBtn = document.getElementById('fullscreenBtn');
+  fullscreenBtn.addEventListener('click',()=>{
+    if(!document.fullscreenElement){
+      iframe.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  });
+
+  // 初回実行
+  updatePreview();
+</script>
+</body>
+</html>
